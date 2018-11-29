@@ -4,4 +4,4 @@ RUN apt-get update -y \
  && mkdir /opt/certnly
 WORKDIR /opt/certnly
 ADD certnly.sh certnly.sh
-CMD certnly.sh
+CMD ./certnly.sh
