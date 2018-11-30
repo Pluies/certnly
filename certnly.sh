@@ -61,4 +61,7 @@ log "Updating the secret in kubernetes"
 curl --silent --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
      -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
      -XPUT -H "Accept: application/json, */*" -H "Content-Type: application/json" \
-     -d @secret.json https://${KUBERNETES_SERVICE_HOST}/api/v1/namespaces/${NAMESPACE}/secrets/${SECRET_NAME}
+     -d @secret.json https://${KUBERNETES_SERVICE_HOST}/api/v1/namespaces/${NAMESPACE}/secrets/${SECRET_NAME} \
+     > /dev/null
+
+log "Secret updated, all done!"
