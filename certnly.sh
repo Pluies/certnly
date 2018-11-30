@@ -3,7 +3,7 @@
 set -eo pipefail
 
 log () {
-  echo "[$(date)] $0"
+  echo "[$(date)] $1"
 }
 
 if [[ -z "$EMAIL" || -z "$DOMAINS" || -z "$SECRET_NAME" || -z "$EXISTING_SECRET_TAR" ]]
