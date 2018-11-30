@@ -25,9 +25,7 @@ fi
 set -u
 
 log "Recreate the /etc/letsencrypt/ folder and subdirectories"
-pushd /
-tar -xzf $EXISTING_SECRET_TAR
-popd
+(cd / && tar -xzf $EXISTING_SECRET_TAR)
 
 log "Serving /root over port 80 so that certbot can read its .well-known challenge"
 python -m SimpleHTTPServer 80 &
@@ -37,9 +35,7 @@ certbot certonly "$STAGING_FLAG" --webroot -w "." -n --agree-tos --email "$EMAIL
 
 log "Recompressing /etc/letsencrypt"
 NEW_TAR=/tmp/letsencrypt.tar.gz
-pushd /
-tar -czf $NEW_TAR /etc/letsencrypt/
-popd
+(cd / && tar -czf $NEW_TAR /etc/letsencrypt/)
 
 log "Generating the updated secret"
 cat <<SECRET > secret.json
