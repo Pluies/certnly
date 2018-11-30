@@ -26,7 +26,7 @@ set -u
 
 log "Recreate the /etc/letsencrypt/ folder and subdirectories"
 pushd /
-tar -xzvf $EXISTING_SECRET_TAR
+tar -xzf $EXISTING_SECRET_TAR
 popd
 
 log "Serving /root over port 80 so that certbot can read its .well-known challenge"
@@ -38,7 +38,7 @@ certbot certonly "$STAGING_FLAG" --webroot -w "." -n --agree-tos --email "$EMAIL
 log "Recompressing /etc/letsencrypt"
 NEW_TAR=/tmp/letsencrypt.tar.gz
 pushd /
-tar -czvf $NEW_TAR /etc/letsencrypt/
+tar -czf $NEW_TAR /etc/letsencrypt/
 popd
 
 log "Generating the updated secret"
@@ -58,7 +58,7 @@ base64 -w0 < $NEW_TAR             >> secret.json
 echo -n '"}}'                     >> secret.json
 
 log "Updating the secret in kubernetes"
-curl --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+curl --silent --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
      -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-     -k -XPUT -H "Accept: application/json, */*" -H "Content-Type: application/json" \
+     -XPUT -H "Accept: application/json, */*" -H "Content-Type: application/json" \
      -d @secret.json https://${KUBERNETES_SERVICE_HOST}/api/v1/namespaces/${NAMESPACE}/secrets/${SECRET_NAME}
