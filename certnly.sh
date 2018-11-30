@@ -2,34 +2,44 @@
 
 set -eo pipefail
 
+log() { echo "[$(date)] $0" }
+
 if [[ -z "$EMAIL" || -z "$DOMAINS" || -z "$SECRET_NAME" || -z "$EXISTING_SECRET_TAR" ]]
 then
   echo "EMAIL, DOMAINS, SECRET_NAME, and EXISTING_SECRET_TAR env vars required"
   exit 1
 fi
 
-# Ensure STAGING_FLAG exists as a var, then start catching unset vars
-if [[ -z "$STAGING_FLAG" ]]; then STAGING_FLAG=""; fi
+# Deal with STAGING_FLAG, then start catching unset vars
+if [[ "$USE_STAGING" == "true" ]]
+then
+  STAGING_FLAG="--staging"
+  log "Using staging letsencrypt - certificates will be invalid"
+else
+  STAGING_FLAG=""
+  log "Using production letsencrypt"
+fi
+
 set -u
 
-# Recreate the /etc/letsencrypt/ folder and subdirectories
+log "Recreate the /etc/letsencrypt/ folder and subdirectories"
 pushd /
 tar -xzvf $EXISTING_SECRET_TAR
 popd
 
-# Serve /root over port 80 so that certbot can read its .well-known challenge
+log "Serving /root over port 80 so that certbot can read its .well-known challenge"
 python -m SimpleHTTPServer 80 &
 
-# Do the challenge!
-certbot certonly --webroot -w "." -n --agree-tos --email "$EMAIL" --no-self-upgrade -d "$DOMAINS"
+log "Processing letsencrypt challenge!"
+certbot certonly "$STAGING_FLAG" --webroot -w "." -n --agree-tos --email "$EMAIL" --no-self-upgrade -d "$DOMAINS"
 
-# Recompress /etc/letsencrypt
+log "Recompressing /etc/letsencrypt"
 NEW_TAR=/tmp/letsencrypt.tar.gz
 pushd /
 tar -czvf $NEW_TAR /etc/letsencrypt/
 popd
 
-# Generate the updated secret
+log "Generating the updated secret"
 cat <<SECRET > secret.json
 {
   "kind": "Secret",
@@ -45,8 +55,8 @@ echo -n '"letsencrypt.tar.gz": "' >> secret.json
 base64 -w0 < $NEW_TAR             >> secret.json
 echo -n '"}}'                     >> secret.json
 
-# Update the secret in kubernetes
-curl -v --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+log "Updating the secret in kubernetes"
+curl --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
      -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-     -k -v -XPUT -H "Accept: application/json, */*" -H "Content-Type: application/json" \
+     -k -XPUT -H "Accept: application/json, */*" -H "Content-Type: application/json" \
      -d @secret.json https://${KUBERNETES_SERVICE_HOST}/api/v1/namespaces/${NAMESPACE}/secrets/${SECRET_NAME}
