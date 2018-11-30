@@ -1,12 +1,16 @@
 #!/bin/bash
 
-set -euo pipefail
+set -eo pipefail
 
 if [[ -z "$EMAIL" || -z "$DOMAINS" || -z "$SECRET_NAME" || -z "$EXISTING_SECRET_TAR" ]]
 then
-  echo "EMAIL, DOMAINS, SECRET_NAME, and EXISTING_SECRET_DIR env vars required"
+  echo "EMAIL, DOMAINS, SECRET_NAME, and EXISTING_SECRET_TAR env vars required"
   exit 1
 fi
+
+# Ensure STAGING_FLAG exists as a var, then start catching unset vars
+if [[ -z "$STAGING_FLAG" ]]; then STAGING_FLAG=""; fi
+set -u
 
 # Recreate the /etc/letsencrypt/ folder and subdirectories
 pushd /
