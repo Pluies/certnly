@@ -15,9 +15,10 @@ fi
 # Deal with STAGING_FLAG, then start catching unset vars
 if [[ "$USE_STAGING" == "true" ]]
 then
+  STAGING_FLAG="--staging"
   log "Using staging letsencrypt - certificates will be invalid"
 else
-  USE_STAGING="false"
+  STAGING_FLAG=""
   log "Using production letsencrypt"
 fi
 
@@ -38,12 +39,10 @@ log "Serving /root over port 80 so that certbot can read its .well-known challen
 python -m SimpleHTTPServer 80 &
 
 log "Processing letsencrypt challenge!"
-if [[ "$USE_STAGING" == "true" ]]
-then
-  certbot certonly --staging --webroot -w "." -n --agree-tos --email "$EMAIL" --no-self-upgrade $DOMAIN_CMD
-else
-  certbot certonly --webroot -w "." -n --agree-tos --email "$EMAIL" --no-self-upgrade $DOMAIN_CMD
-fi
+CERTBOT_CMD="certbot certonly $STAGING_FLAG --webroot -w '.' -n --agree-tos --email '$EMAIL' --no-self-upgrade $DOMAIN_CMD"
+
+log "Using command: $CERTBOT_CMD"
+eval $CERTBOT_CMD
 
 log "Recompressing /etc/letsencrypt"
 NEW_TAR=/tmp/letsencrypt.tar.gz
