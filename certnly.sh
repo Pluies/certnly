@@ -8,30 +8,42 @@ log () {
 
 if [[ -z "$EMAIL" || -z "$DOMAINS" || -z "$SECRET_NAME" || -z "$EXISTING_SECRET_TAR" ]]
 then
-  echo "EMAIL, DOMAINS, SECRET_NAME, and EXISTING_SECRET_TAR env vars required"
+  log "EMAIL, DOMAINS, SECRET_NAME, and EXISTING_SECRET_TAR env vars required"
   exit 1
 fi
 
 # Deal with STAGING_FLAG, then start catching unset vars
 if [[ "$USE_STAGING" == "true" ]]
 then
-  STAGING_FLAG="--staging"
   log "Using staging letsencrypt - certificates will be invalid"
 else
-  STAGING_FLAG=""
+  USE_STAGING="false"
   log "Using production letsencrypt"
 fi
 
 set -u
 
-log "Recreate the /etc/letsencrypt/ folder and subdirectories"
+# Split domains
+DOMAIN_CMD=""
+IFS=","
+for DOMAIN in $DOMAINS
+do
+  DOMAIN_CMD="$DOMAIN_CMD -d $DOMAIN"
+done
+
+log "Recreating the /etc/letsencrypt/ folder and subdirectories"
 (cd / && tar -xzf $EXISTING_SECRET_TAR)
 
 log "Serving /root over port 80 so that certbot can read its .well-known challenge"
 python -m SimpleHTTPServer 80 &
 
 log "Processing letsencrypt challenge!"
-certbot certonly "$STAGING_FLAG" --webroot -w "." -n --agree-tos --email "$EMAIL" --no-self-upgrade -d "$DOMAINS"
+if [[ "$USE_STAGING" == "true" ]]
+then
+  certbot certonly --staging --webroot -w "." -n --agree-tos --email "$EMAIL" --no-self-upgrade $DOMAIN_CMD
+else
+  certbot certonly --webroot -w "." -n --agree-tos --email "$EMAIL" --no-self-upgrade $DOMAIN_CMD
+fi
 
 log "Recompressing /etc/letsencrypt"
 NEW_TAR=/tmp/letsencrypt.tar.gz
