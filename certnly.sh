@@ -24,22 +24,15 @@ fi
 
 set -u
 
-# Split domains
-DOMAIN_CMD=""
-IFS=","
-for DOMAIN in $DOMAINS
-do
-  DOMAIN_CMD="$DOMAIN_CMD -d $DOMAIN"
-done
-
 log "Recreating the /etc/letsencrypt/ folder and subdirectories"
 (cd / && tar -xzf $EXISTING_SECRET_TAR)
 
 log "Serving /root over port 80 so that certbot can read its .well-known challenge"
 python -m SimpleHTTPServer 80 &
+sleep 5 # Give python some time to set up before letsencrypt
 
 log "Processing letsencrypt challenge!"
-CERTBOT_CMD="certbot certonly $STAGING_FLAG --webroot -w '.' -n --agree-tos --email '$EMAIL' --no-self-upgrade $DOMAIN_CMD"
+CERTBOT_CMD="certbot certonly $STAGING_FLAG --webroot -w '.' -n --agree-tos --email '$EMAIL' --no-self-upgrade --cert-name '$SECRET_NAME' -d '$DOMAINS'"
 
 log "Using command: $CERTBOT_CMD"
 eval $CERTBOT_CMD
