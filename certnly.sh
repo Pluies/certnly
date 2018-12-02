@@ -57,11 +57,11 @@ echo -n '"letsencrypt.tar.gz": "' >> secret.json
 base64 -w0 < $NEW_TAR             >> secret.json
 echo -n '"}}'                     >> secret.json
 
-log "Updating the secret in kubernetes"
+log "Updating the secret in kubernetes..."
 curl --silent --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
      -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
      -XPUT -H "Accept: application/json, */*" -H "Content-Type: application/json" \
      -d @secret.json https://${KUBERNETES_SERVICE_HOST}/api/v1/namespaces/${NAMESPACE}/secrets/${SECRET_NAME} \
-     > /dev/null
+     -o /dev/null -w "Status: %{http_code}\n"
 
 log "Secret updated, all done!"
